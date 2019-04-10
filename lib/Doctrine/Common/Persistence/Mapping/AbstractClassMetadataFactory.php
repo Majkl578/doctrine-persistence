@@ -4,14 +4,13 @@ namespace Doctrine\Common\Persistence\Mapping;
 
 use Doctrine\Common\Cache\Cache;
 use Doctrine\Common\Persistence\Mapping\Driver\MappingDriver;
-use Doctrine\Common\Persistence\Proxy;
+use Doctrine\Persistence\Proxy\DefaultProxyNamingInflector;
+use Doctrine\Persistence\Proxy\ProxyNamingInflector;
 use ReflectionException;
 use function array_reverse;
 use function array_unshift;
 use function explode;
 use function strpos;
-use function strrpos;
-use function substr;
 
 /**
  * The ClassMetadataFactory is used to create ClassMetadata objects that contain all the
@@ -40,6 +39,14 @@ abstract class AbstractClassMetadataFactory implements ClassMetadataFactory
 
     /** @var ReflectionService|null */
     private $reflectionService = null;
+
+    /** @var ProxyNamingInflector|null */
+    private $proxyNamingInflector;
+
+    public function __construct(?ProxyNamingInflector $proxyNamingInflector = null)
+    {
+        $this->proxyNamingInflector = $proxyNamingInflector ?? new DefaultProxyNamingInflector();
+    }
 
     /**
      * Sets the cache driver used by the factory to cache ClassMetadata instances.
@@ -402,12 +409,10 @@ abstract class AbstractClassMetadataFactory implements ClassMetadataFactory
      */
     private function getRealClass(string $class) : string
     {
-        $pos = strrpos($class, '\\' . Proxy::MARKER . '\\');
-
-        if ($pos === false) {
-            return $class;
+        if ($this->proxyNamingInflector === null) {
+            $this->proxyNamingInflector = new DefaultProxyNamingInflector();
         }
 
-        return substr($class, $pos + Proxy::MARKER_LENGTH + 2);
+        return $this->proxyNamingInflector->getRealClassName($class);
     }
 }
